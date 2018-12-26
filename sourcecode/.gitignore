@@ -1,0 +1,3 @@
+# ignore models and samples directory
+models/
+samples/

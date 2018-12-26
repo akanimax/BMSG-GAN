@@ -1,0 +1,5 @@
+# ignore the link to celeba dataset and the CAT dataset
+celeba
+CAT_dataset
+indian-celebs
+asuka

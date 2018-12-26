@@ -5,6 +5,7 @@ import datetime
 import os
 import time
 import timeit
+import copy
 import numpy as np
 import torch as th
 
@@ -12,17 +13,16 @@ import torch as th
 class Generator(th.nn.Module):
     """ Generator of the GAN network """
 
-    def __init__(self, depth=7, latent_size=512, dilation=1, use_spectral_norm=True):
+    def __init__(self, depth=7, latent_size=512, use_eql=True):
         """
         constructor for the Generator class
         :param depth: required depth of the Network
         :param latent_size: size of the latent manifold
-        :param dilation: amount of dilation to be used by the 3x3 convs
-                         in the Generator module.
-        :param use_spectral_norm: whether to use spectral normalization
+        :param use_eql: whether to use equalized learning rate
         """
         from torch.nn import ModuleList, Conv2d
-        from MSG_GAN.CustomLayers import GenGeneralConvBlock, GenInitialBlock
+        from MSG_GAN.CustomLayers import GenGeneralConvBlock, \
+            GenInitialBlock, _equalized_conv2d
 
         super().__init__()
 
@@ -32,77 +32,38 @@ class Generator(th.nn.Module):
             assert latent_size >= np.power(2, depth - 4), "latent size will diminish to zero"
 
         # state of the generator:
+        self.use_eql = use_eql
         self.depth = depth
         self.latent_size = latent_size
-        self.spectral_norm_mode = None
-        self.dilation = dilation
 
-        # register the modules required for the GAN Below ...
+        # register the modules required for the Generator Below ...
         # create the ToRGB layers for various outputs:
-        def to_rgb(in_channels):
-            return Conv2d(in_channels, 3, (1, 1), bias=True)
+        if self.use_eql:
+            def to_rgb(in_channels):
+                return _equalized_conv2d(in_channels, 3, (1, 1), bias=True)
+        else:
+            def to_rgb(in_channels):
+                return Conv2d(in_channels, 3, (1, 1), bias=True)
 
         # create a module list of the other required general convolution blocks
-        self.layers = ModuleList([GenInitialBlock(self.latent_size)])
+        self.layers = ModuleList([GenInitialBlock(self.latent_size, use_eql=self.use_eql)])
         self.rgb_converters = ModuleList([to_rgb(self.latent_size)])
 
         # create the remaining layers
         for i in range(self.depth - 1):
             if i <= 2:
                 layer = GenGeneralConvBlock(self.latent_size, self.latent_size,
-                                            dilation=dilation)
+                                            use_eql=self.use_eql)
                 rgb = to_rgb(self.latent_size)
             else:
                 layer = GenGeneralConvBlock(
                     int(self.latent_size // np.power(2, i - 3)),
                     int(self.latent_size // np.power(2, i - 2)),
-                    dilation=dilation
+                    use_eql=self.use_eql
                 )
                 rgb = to_rgb(int(self.latent_size // np.power(2, i - 2)))
             self.layers.append(layer)
             self.rgb_converters.append(rgb)
-
-        # if spectral normalization is on:
-        if use_spectral_norm:
-            self.turn_on_spectral_norm()
-
-    def turn_on_spectral_norm(self):
-        """
-        private helper for turning on the spectral normalization
-        :return: None (has side effect)
-        """
-        from torch.nn.utils import spectral_norm
-
-        if self.spectral_norm_mode is not None:
-            assert self.spectral_norm_mode is False, \
-                "can't apply spectral_norm. It is already applied"
-
-        # apply the same to the remaining relevant blocks
-        for module in self.layers:
-            module.conv_1 = spectral_norm(module.conv_1)
-            module.conv_2 = spectral_norm(module.conv_2)
-
-        # toggle the state variable:
-        self.spectral_norm_mode = True
-
-    def turn_off_spectral_norm(self):
-        """
-        private helper for turning off the spectral normalization
-        :return: None (has side effect)
-        """
-        from torch.nn.utils import remove_spectral_norm
-
-        if self.spectral_norm_mode is not None:
-            assert self.spectral_norm_mode is True, \
-                "can't remove spectral_norm. It is not applied"
-
-        # remove the applied spectral norm
-        for module in self.layers:
-            remove_spectral_norm(module.conv_1)
-            remove_spectral_norm(module.conv_2)
-
-        # toggle the state variable:
-        self.spectral_norm_mode = False
 
     def forward(self, x):
         """
@@ -110,13 +71,12 @@ class Generator(th.nn.Module):
         :param x: input noise
         :return: *y => output of the generator at various scales
         """
-        from torch import tanh
         outputs = []  # initialize to empty list
 
         y = x  # start the computational pipeline
         for block, converter in zip(self.layers, self.rgb_converters):
             y = block(y)
-            outputs.append(tanh(converter(y)))
+            outputs.append(converter(y))
 
         return outputs
 
@@ -124,19 +84,22 @@ class Generator(th.nn.Module):
 class Discriminator(th.nn.Module):
     """ Discriminator of the GAN """
 
-    def __init__(self, depth=7, feature_size=512, dilation=1, use_spectral_norm=True):
+    def __init__(self, depth=7, feature_size=512,
+                 use_eql=True, gpu_parallelize=False):
         """
         constructor for the class
         :param depth: total depth of the discriminator
                        (Must be equal to the Generator depth)
         :param feature_size: size of the deepest features extracted
                              (Must be equal to Generator latent_size)
-        :param dilation: amount of dilation to be applied to
-                         the 3x3 convolutional blocks of the discriminator
-        :param use_spectral_norm: whether to use spectral_normalization
+        :param use_eql: whether to use the equalized learning rate or not
+        :param gpu_parallelize: whether to use DataParallel on the discriminator
+                                Note that the Last block contains StdDev layer
+                                So, it is not parallelized.
         """
         from torch.nn import ModuleList
-        from MSG_GAN.CustomLayers import DisGeneralConvBlock, DisFinalBlock
+        from MSG_GAN.CustomLayers import DisGeneralConvBlock, \
+            DisFinalBlock, _equalized_conv2d
         from torch.nn import Conv2d
 
         super().__init__()
@@ -148,19 +111,25 @@ class Discriminator(th.nn.Module):
                 "feature size cannot be produced"
 
         # create state of the object
+        self.gpu_parallelize = gpu_parallelize
+        self.use_eql = use_eql
         self.depth = depth
         self.feature_size = feature_size
-        self.spectral_norm_mode = None
-        self.dilation = dilation
 
         # create the fromRGB layers for various inputs:
-        def from_rgb(out_channels):
-            return Conv2d(3, out_channels, (1, 1), bias=True)
+        if self.use_eql:
+            def from_rgb(out_channels):
+                return _equalized_conv2d(3, out_channels, (1, 1), bias=True)
+        else:
+            def from_rgb(out_channels):
+                return Conv2d(3, out_channels, (1, 1), bias=True)
 
-        self.rgb_to_features = ModuleList([from_rgb(self.feature_size // 2)])
+        self.rgb_to_features = ModuleList()
+        self.final_converter = from_rgb(self.feature_size // 2)
 
         # create a module list of the other required general convolution blocks
-        self.layers = ModuleList([DisFinalBlock(self.feature_size)])
+        self.layers = ModuleList()
+        self.final_block = DisFinalBlock(self.feature_size, use_eql=self.use_eql)
 
         # create the remaining layers
         for i in range(self.depth - 1):
@@ -168,12 +137,12 @@ class Discriminator(th.nn.Module):
                 layer = DisGeneralConvBlock(
                     int(self.feature_size // np.power(2, i - 2)),
                     int(self.feature_size // np.power(2, i - 2)),
-                    dilation=dilation
+                    use_eql=self.use_eql
                 )
                 rgb = from_rgb(int(self.feature_size // np.power(2, i - 1)))
             else:
                 layer = DisGeneralConvBlock(self.feature_size, self.feature_size // 2,
-                                            dilation=dilation)
+                                            use_eql=self.use_eql)
                 rgb = from_rgb(self.feature_size // 2)
 
             self.layers.append(layer)
@@ -183,47 +152,17 @@ class Discriminator(th.nn.Module):
         self.rgb_to_features[self.depth - 1] = \
             from_rgb(self.feature_size // np.power(2, i - 2))
 
-        # if spectral normalization is on:
-        if use_spectral_norm:
-            self.turn_on_spectral_norm()
+        # parallelize the modules from the module-lists if asked to:
+        if self.gpu_parallelize:
+            for i in range(len(self.layers)):
+                self.layers[i] = th.nn.DataParallel(self.layers[i])
+                self.rgb_to_features[i] = th.nn.DataParallel(
+                    self.rgb_to_features[i])
 
-    def turn_on_spectral_norm(self):
-        """
-        private helper for turning on the spectral normalization
-        :return: None (has side effect)
-        """
-        from torch.nn.utils import spectral_norm
-
-        if self.spectral_norm_mode is not None:
-            assert self.spectral_norm_mode is False, \
-                "can't apply spectral_norm. It is already applied"
-
-        # apply the same to the remaining relevant blocks
-        for module in self.layers:
-            module.conv_1 = spectral_norm(module.conv_1)
-            module.conv_2 = spectral_norm(module.conv_2)
-
-        # toggle the state variable:
-        self.spectral_norm_mode = True
-
-    def turn_off_spectral_norm(self):
-        """
-        private helper for turning off the spectral normalization
-        :return: None (has side effect)
-        """
-        from torch.nn.utils import remove_spectral_norm
-
-        if self.spectral_norm_mode is not None:
-            assert self.spectral_norm_mode is True, \
-                "can't remove spectral_norm. It is not applied"
-
-        # remove the applied spectral norm
-        for module in self.layers:
-            remove_spectral_norm(module.conv_1)
-            remove_spectral_norm(module.conv_2)
-
-        # toggle the state variable:
-        self.spectral_norm_mode = False
+        # Note that since the FinalBlock contains the StdDev layer,
+        # it cannot be parallelized so easily. It will have to be parallelized
+        # from the Lower level (from CustomLayers). This much parallelism
+        # seems enough for me.
 
     def forward(self, inputs):
         """
@@ -235,16 +174,22 @@ class Discriminator(th.nn.Module):
         assert len(inputs) == self.depth, \
             "Mismatch between input and Network scales"
 
-        y = self.rgb_to_features[self.depth - 1](inputs[self.depth - 1])
-        y = self.layers[self.depth - 1](y)
+        y = self.rgb_to_features[self.depth - 2](inputs[self.depth - 1])
+        y = self.layers[self.depth - 2](y)
         for x, block, converter in \
-                zip(reversed(inputs[:-1]),
+                zip(reversed(inputs[1:-1]),
                     reversed(self.layers[:-1]),
                     reversed(self.rgb_to_features[:-1])):
             input_part = converter(x)  # convert the input:
             y = th.cat((input_part, y), dim=1)  # concatenate the inputs:
             y = block(y)  # apply the block
 
+        # calculate the final block:
+        input_part = self.final_converter(inputs[0])
+        y = th.cat((input_part, y), dim=1)
+        y = self.final_block(y)
+
+        # return calculated y
         return y
 
 
@@ -254,36 +199,54 @@ class MSG_GAN:
         args:
             depth: depth of the GAN (will be used for each generator and discriminator)
             latent_size: latent size of the manifold used by the GAN
-            gen_dilation: amount of dilation for generator
-            dis_dilation: amount of dilation for discriminator
-            use_spectral_norm: whether to use spectral normalization to the convolutional
-                               blocks.
+            use_eql: whether to use the equalized learning rate
+            use_ema: whether to use exponential moving averages.
+            ema_decay: value of ema decay. Used only if use_ema is True
             device: device to run the GAN on (GPU / CPU)
     """
 
-    def __init__(self, depth=7, latent_size=512, gen_dilation=1,
-                 dis_dilation=1, use_spectral_norm=True, device=th.device("cpu")):
+    def __init__(self, depth=7, latent_size=512,
+                 use_eql=True, use_ema=True, ema_decay=0.999,
+                 device=th.device("cpu")):
         """ constructor for the class """
         from torch.nn import DataParallel
 
-        self.gen = Generator(depth, latent_size, dilation=gen_dilation,
-                             use_spectral_norm=use_spectral_norm).to(device)
-        self.dis = Discriminator(depth, latent_size, dilation=dis_dilation,
-                                 use_spectral_norm=use_spectral_norm).to(device)
+        self.gen = Generator(depth, latent_size, use_eql=use_eql).to(device)
 
-        # Create the Generator and the Discriminator
+        # Parallelize them if required:
         if device == th.device("cuda"):
             self.gen = DataParallel(self.gen)
-            self.dis = DataParallel(self.dis)
+            self.dis = Discriminator(depth, latent_size,
+                                     use_eql=use_eql, gpu_parallelize=True).to(device)
+        else:
+            self.dis = Discriminator(depth, latent_size, use_eql=True).to(device)
 
         # state of the object
+        self.use_ema = use_ema
+        self.ema_decay = ema_decay
+        self.use_eql = use_eql
         self.latent_size = latent_size
         self.depth = depth
         self.device = device
 
+        if self.use_ema:
+            from MSG_GAN.CustomLayers import update_average
+
+            # create a shadow copy of the generator
+            self.gen_shadow = copy.deepcopy(self.gen)
+
+            # updater function:
+            self.ema_updater = update_average
+
+            # initialize the gen_shadow weights equal to the
+            # weights of gen
+            self.ema_updater(self.gen_shadow, self.gen, beta=0)
+
         # by default the generator and discriminator are in eval mode
         self.gen.eval()
         self.dis.eval()
+        if self.use_ema:
+            self.gen_shadow.eval()
 
     def generate_samples(self, num_samples):
         """
@@ -345,6 +308,10 @@ class MSG_GAN:
         loss.backward()
         gen_optim.step()
 
+        # if self.use_ema is true, apply the moving average here:
+        if self.use_ema:
+            self.ema_updater(self.gen_shadow, self.gen, self.ema_decay)
+
         return loss.item()
 
     @staticmethod
@@ -357,19 +324,19 @@ class MSG_GAN:
         """
         from torchvision.utils import save_image
         from numpy import sqrt
-        
+
         # save the images:
         for sample, img_file in zip(samples, img_files):
-            sample = th.clamp((sample.detach() / 2) + 0.5, min=0, max=1)
-            save_image(sample, img_file, nrow=int(sqrt(sample.shape[0])))
+            save_image(sample, img_file, nrow=int(sqrt(sample.shape[0])),
+                       normalize=True, scale_each=True)
 
     def train(self, data, gen_optim, dis_optim, loss_fn,
               start=1, num_epochs=12, feedback_factor=10, checkpoint_factor=1,
-              data_percentage=100, num_samples=64,
+              data_percentage=100, num_samples=36,
               log_dir=None, sample_dir="./samples",
               save_dir="./models"):
 
-        # TODOcomplete write the documentation for this method
+        # TODO_complete write the documentation for this method
         # no more procrastination ... HeHe
         """
         Method for training the network
@@ -411,6 +378,7 @@ class MSG_GAN:
 
         # create a global time counter
         global_time = time.time()
+        global_step = 0
 
         for epoch in range(start, num_epochs + 1):
             start = timeit.default_timer()  # record time at the start of epoch
@@ -457,7 +425,8 @@ class MSG_GAN:
                         log_file = os.path.join(log_dir, "loss.log")
                         os.makedirs(os.path.dirname(log_file), exist_ok=True)
                         with open(log_file, "a") as log:
-                            log.write(str(dis_loss) + "\t" + str(gen_loss) + "\n")
+                            log.write(str(global_step) + "\t" + str(dis_loss) +
+                                      "\t" + str(gen_loss) + "\n")
 
                     # create a grid of samples and save it
                     reses = [str(int(np.power(2, dep))) + "_x_"
@@ -477,7 +446,13 @@ class MSG_GAN:
                     dis_optim.zero_grad()
                     gen_optim.zero_grad()
                     with th.no_grad():
-                        self.create_grid(self.gen(fixed_input), gen_img_files)
+                        self.create_grid(
+                            self.gen(fixed_input) if not self.use_ema
+                            else self.gen_shadow(fixed_input),
+                            gen_img_files)
+
+                # increment the global_step:
+                global_step += 1
 
                 if i > limit:
                     break
@@ -499,6 +474,11 @@ class MSG_GAN:
                 th.save(self.dis.state_dict(), dis_save_file)
                 th.save(gen_optim.state_dict(), gen_optim_save_file)
                 th.save(dis_optim.state_dict(), dis_optim_save_file)
+
+                if self.use_ema:
+                    gen_shadow_save_file = os.path.join(save_dir, "GAN_GEN_SHADOW_"
+                                                        + str(epoch) + ".pth")
+                    th.save(self.gen_shadow.state_dict(), gen_shadow_save_file)
 
         print("Training completed ...")
 

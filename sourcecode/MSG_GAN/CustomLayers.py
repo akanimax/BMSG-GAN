@@ -421,7 +421,7 @@ class DisGeneralConvBlock(th.nn.Module):
         if use_eql:
             self.conv_1 = _equalized_conv2d(in_channels, in_channels, (3, 3),
                                             pad=1, bias=True)
-            self.conv_2 = _equalized_conv2d(in_channels, in_channels, (3, 3),
+            self.conv_2 = _equalized_conv2d(in_channels, out_channels, (3, 3),
                                             pad=1, bias=True)
         else:
             # convolutional modules

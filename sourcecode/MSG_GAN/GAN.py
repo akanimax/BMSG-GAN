@@ -314,8 +314,7 @@ class MSG_GAN:
 
         return loss.item()
 
-    @staticmethod
-    def create_grid(samples, img_files):
+    def create_grid(self, samples, img_files):
         """
         utility function to create a grid of GAN samples
         :param samples: generated samples for storing list[Tensors]
@@ -323,7 +322,14 @@ class MSG_GAN:
         :return: None (saves multiple files)
         """
         from torchvision.utils import save_image
-        from numpy import sqrt
+        from torch.nn.functional import interpolate
+        from numpy import sqrt, power
+
+        # resize the samples to have same resolution:
+        for i in range(len(samples)):
+            samples[i] = interpolate(samples[i], 
+                                     scale_factor=power(2, 
+                                                        self.depth - 1 - i))
 
         # save the images:
         for sample, img_file in zip(samples, img_files):

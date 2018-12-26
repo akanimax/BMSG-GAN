@@ -149,7 +149,7 @@ class Discriminator(th.nn.Module):
             self.rgb_to_features.append(rgb)
 
         # just replace the last converter
-        self.rgb_to_features[self.depth - 1] = \
+        self.rgb_to_features[self.depth - 2] = \
             from_rgb(self.feature_size // np.power(2, i - 2))
 
         # parallelize the modules from the module-lists if asked to:

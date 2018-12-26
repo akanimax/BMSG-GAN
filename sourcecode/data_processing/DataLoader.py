@@ -56,7 +56,7 @@ class FlatDirectoryImageDataset(Dataset):
         img_name = self.files[idx]
         if img_name[-4:] == ".npy":
             img = np.load(img_name)
-            img = Image.fromarray(img)
+            img = Image.fromarray(img.squeeze(0).transpose(1, 2, 0))
         else:
             img = Image.open(img_name)
 

@@ -60,7 +60,7 @@ def parse_arguments():
                         help="path for saved models directory")
 
     parser.add_argument("--loss_function", action="store", type=str,
-                        default="wgan-gp",
+                        default="relativistic-hinge",
                         help="loss function to be used: " +
                              "standard-gan, wgan-gp, lsgan," +
                              "lsgan-sigmoid," +
@@ -173,6 +173,7 @@ def main(args):
 
     if args.generator_file is not None:
         # load the weights into generator
+        print("loading generator_weights from:", args.generator_file)
         msg_gan.gen.load_state_dict(th.load(args.generator_file))
 
     print("Generator Configuration: ")
@@ -180,11 +181,14 @@ def main(args):
 
     if args.shadow_generator_file is not None:
         # load the weights into generator
+        print("loading shadow_generator_weights from:",
+              args.shadow_generator_file)
         msg_gan.gen_shadow.load_state_dict(
             th.load(args.shadow_generator_file))
 
     if args.discriminator_file is not None:
         # load the weights into discriminator
+        print("loading discriminator_weights from:", args.discriminator_file)
         msg_gan.dis.load_state_dict(th.load(args.discriminator_file))
 
     print("Discriminator Configuration: ")
@@ -198,9 +202,11 @@ def main(args):
                               [args.adam_beta1, args.adam_beta2])
 
     if args.generator_optim_file is not None:
+        print("loading gen_optim_state from:", args.generator_optim_file)
         gen_optim.load_state_dict(th.load(args.generator_optim_file))
 
     if args.discriminator_optim_file is not None:
+        print("loading dis_optim_state from:", args.discriminator_optim_file)
         dis_optim.load_state_dict(th.load(args.discriminator_optim_file))
 
     loss_name = args.loss_function.lower()

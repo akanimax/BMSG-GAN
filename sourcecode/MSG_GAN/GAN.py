@@ -387,7 +387,7 @@ class MSG_GAN:
         global_step = 0
 
         for epoch in range(start, num_epochs + 1):
-            start = timeit.default_timer()  # record time at the start of epoch
+            start_time = timeit.default_timer()  # record time at the start of epoch
 
             print("\nEpoch: %d" % epoch)
             total_batches = len(iter(data))
@@ -464,8 +464,8 @@ class MSG_GAN:
                     break
 
             # calculate the time required for the epoch
-            stop = timeit.default_timer()
-            print("Time taken for epoch: %.3f secs" % (stop - start))
+            stop_time = timeit.default_timer()
+            print("Time taken for epoch: %.3f secs" % (stop_time - start_time))
 
             if epoch % checkpoint_factor == 0 or epoch == 1 or epoch == num_epochs:
                 os.makedirs(save_dir, exist_ok=True)

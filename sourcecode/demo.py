@@ -1,105 +1,80 @@
-""" demo script for sampling the trained model"""
+""" !!! Not fully ready !!! """
+""" Work in progress demo utility for showing 
+live (realtime) latent space interpolations of trained models """
 
-import argparse
 
-import numpy as np
 import torch as th
-import os
 import matplotlib.pyplot as plt
-from torch.backends import cudnn
+from matplotlib.animation import FuncAnimation
+from MSG_GAN.GAN import Generator
+from generate_multi_scale_samples import progressive_upscaling
+from torchvision.utils import make_grid
+from math import ceil, sqrt
 
-# define the device for the training script
+# ==========================================================================
+# Tweakable parameters
+# ==========================================================================
+generator_file_path = "models/celebahq_testing/GAN_GEN_SHADOW_720.pth"
+depth = 8
+latent_size = 512
+num_points = 30
+transition_points = 15
+# ==========================================================================
+
+# create the device for running the demo:
 device = th.device("cuda" if th.cuda.is_available() else "cpu")
 
-# enable fast training
-cudnn.benchmark = True
+# load the model for the demo
+gen = th.nn.DataParallel(Generator(depth=depth + 1, latent_size=latent_size))
+gen.load_state_dict(th.load(generator_file_path, map_location=str(device)))
 
 
-def parse_arguments():
-    """
-    command line arguments parser
-    :return: args => parsed command line arguments
-    """
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument("--generator_file", action="store", type=str,
-                        default="models/Celeba/3/GAN_GEN_5.pth",
-                        help="pretrained weights file for generator")
-
-    parser.add_argument("--output_dir", action="store", type=str,
-                        default="samples/generated_samples/3",
-                        help="path for the generated samples directory")
-
-    parser.add_argument("--depth", action="store", type=int,
-                        default=6,
-                        help="Depth of the GAN")
-
-    parser.add_argument("--latent_size", action="store", type=int,
-                        default=256,
-                        help="latent size for the generator")
-
-    parser.add_argument("--num_samples", action="store", type=int,
-                        default=36,
-                        help="number of samples to generate for creating the grid" +
-                             " should be a square number preferably")
-
-    parser.add_argument("--show_samples", action="store", type=bool,
-                        default=False,
-                        help="Whether to show the generated samples in windows")
-
-    args = parser.parse_args()
-
-    return args
+# function to generate an image given a latent_point
+def get_image(point):
+    images = list(map(lambda x: x.detach(), gen(point)))
+    images = progressive_upscaling(images)
+    images = list(map(lambda x: x.squeeze(dim=0), images))
+    image = make_grid(
+        images,
+        nrow=int(ceil(sqrt(len(images)))),
+        normalize=True,
+        scale_each=True
+    )
+    return image.cpu().numpy().transpose(1, 2, 0)
 
 
-def main(args):
-    """
-    Main function for the script
-    :param args: parsed command line arguments
-    :return: None
-    """
-    from MSG_GAN.TeacherGAN import Generator, TeacherGAN
-    from torch.nn import DataParallel
+# generate the set of points:
+fixed_points = th.randn(num_points, 512).to(device)
+# fixed_points = (fixed_points / fixed_points.norm(dim=1, keepdim=True)) * (512 ** 0.5)
+points = []  # start with an empty list
+for i in range(len(fixed_points) - 1):
+    pt_1 = fixed_points[i].view(1, -1)
+    pt_2 = fixed_points[i + 1].view(1, -1)
+    direction = pt_2 - pt_1
+    for j in range(transition_points):
+        pt = pt_1 + ((direction / transition_points) * j)
+        # pt = (pt / pt.norm()) * (512 ** 0.5)
+        points.append(pt)
+    # also append the final point:
+    points.append(pt_2)
 
-    # create a generator:
-    msg_gan_generator = Generator(depth=args.depth, latent_size=args.latent_size).to(device)
+start_point = points[0]
+points = points[1:]
 
-    if device == th.device("cuda"):
-        msg_gan_generator = DataParallel(msg_gan_generator)
-
-    if args.generator_file is not None:
-        # load the weights into generator
-        msg_gan_generator.load_state_dict(th.load(args.generator_file))
-
-    print("Loaded Generator Configuration: ")
-    print(msg_gan_generator)
-
-    # generate all the samples in a list of lists:
-    samples = []  # start with an empty list
-    for _ in range(args.num_samples):
-        gen_samples = msg_gan_generator(th.randn(1, args.latent_size))
-        samples.append(gen_samples)
-
-        if args.show_samples:
-            for gen_sample in gen_samples:
-                plt.figure()
-                plt.imshow(th.squeeze(gen_sample.detach()).permute(1, 2, 0) / 2 + 0.5)
-            plt.show()
-
-    # create a grid of the generated samples:
-    file_names = []  # initialize to empty list
-    for res_val in range(args.depth):
-        res_dim = np.power(2, res_val + 2)
-        file_name = os.path.join(args.output_dir,
-                                 str(res_dim) + "_" + str(res_dim) + ".png")
-        file_names.append(file_name)
-
-    images = list(map(lambda x: th.cat(x, dim=0), zip(*samples)))
-    TeacherGAN.create_grid(images, file_names)
-
-    print("samples have been generated. Please check:", args.output_dir)
+fig, ax = plt.subplots()
+plt.axis("off")
+shower = plt.imshow(get_image(start_point))
 
 
-if __name__ == '__main__':
-    # invoke the main function of the script
-    main(parse_arguments())
+def init():
+    return shower,
+
+
+def update(point):
+    shower.set_data(get_image(point))
+    return shower,
+
+
+ani = FuncAnimation(fig, update, frames=points,
+                    init_func=init, blit=False)
+plt.show()

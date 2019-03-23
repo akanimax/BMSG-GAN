@@ -327,8 +327,8 @@ class MSG_GAN:
 
         # resize the samples to have same resolution:
         for i in range(len(samples)):
-            samples[i] = interpolate(samples[i], 
-                                     scale_factor=power(2, 
+            samples[i] = interpolate(samples[i],
+                                     scale_factor=power(2,
                                                         self.depth - 1 - i))
 
         # save the images:
@@ -336,7 +336,7 @@ class MSG_GAN:
             save_image(sample, img_file, nrow=int(sqrt(sample.shape[0])),
                        normalize=True, scale_each=True)
 
-    def train(self, data, gen_optim, dis_optim, loss_fn,
+    def train(self, data, gen_optim, dis_optim, loss_fn, normalize_latents=True,
               start=1, num_epochs=12, feedback_factor=10, checkpoint_factor=1,
               data_percentage=100, num_samples=36,
               log_dir=None, sample_dir="./samples",
@@ -352,6 +352,7 @@ class MSG_GAN:
         :param dis_optim: Optimizer for discriminator.
                           please wrap this inside a Scheduler if you want to
         :param loss_fn: Object of GANLoss
+        :param normalize_latents: whether to normalize the latent vectors during training
         :param start: starting epoch number
         :param num_epochs: total number of epochs to run for (ending epoch number)
                            note this is absolute and not relative to start
@@ -381,6 +382,10 @@ class MSG_GAN:
 
         # create fixed_input for debugging
         fixed_input = th.randn(num_samples, self.latent_size).to(self.device)
+        if normalize_latents:
+            fixed_input = (fixed_input
+                           / fixed_input.norm(dim=-1, keepdim=True)
+                           * (self.latent_size ** 0.5))
 
         # create a global time counter
         global_time = time.time()
@@ -405,17 +410,21 @@ class MSG_GAN:
                                      for i in range(1, self.depth)]
                 images = list(reversed(images))
 
+                # sample some random latent points
                 gan_input = th.randn(
                     extracted_batch_size, self.latent_size).to(self.device)
+
+                # normalize them if asked
+                if normalize_latents:
+                    gan_input = (gan_input
+                                 / gan_input.norm(dim=-1, keepdim=True)
+                                 * (self.latent_size ** 0.5))
 
                 # optimize the discriminator:
                 dis_loss = self.optimize_discriminator(dis_optim, gan_input,
                                                        images, loss_fn)
 
                 # optimize the generator:
-                # resample from the latent noise
-                gan_input = th.randn(
-                    extracted_batch_size, self.latent_size).to(self.device)
                 gen_loss = self.optimize_generator(gen_optim, gan_input,
                                                    images, loss_fn)
 

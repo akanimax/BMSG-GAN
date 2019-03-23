@@ -4,8 +4,15 @@ import torch as th
 import argparse
 import matplotlib.pyplot as plt
 import os
-
+from generate_multi_scale_samples import progressive_upscaling
 from torch.backends import cudnn
+from torchvision.utils import make_grid
+from math import sqrt, ceil
+from tqdm import tqdm
+from scipy.ndimage import gaussian_filter
+
+# turn fast mode on
+cudnn.benchmark = True
 
 # define the device for the training script
 device = th.device("cuda" if th.cuda.is_available() else "cpu")
@@ -22,27 +29,19 @@ def parse_arguments():
                         help="pretrained weights file for generator", required=True)
 
     parser.add_argument("--latent_size", action="store", type=int,
-                        default=256,
+                        default=512,
                         help="latent size for the generator")
 
     parser.add_argument("--depth", action="store", type=int,
-                        default=6,
+                        default=9,
                         help="latent size for the generator")
 
     parser.add_argument("--time", action="store", type=float,
-                        default=5,
-                        help="Number of minutes for the video to make")
+                        default=30,
+                        help="Number of seconds for the video to make")
 
     parser.add_argument("--std", action="store", type=float, default=1,
                         help="Truncated standard deviation fo the drawn samples")
-
-    parser.add_argument("--traversal_time", action="store", type=float,
-                        default=3,
-                        help="Number of seconds to go from one point to another")
-
-    parser.add_argument("--static_time", action="store", type=float,
-                        default=1,
-                        help="Number of seconds to display a sample")
 
     parser.add_argument("--fps", action="store", type=int,
                         default=30, help="Frames per second in the video")
@@ -54,6 +53,19 @@ def parse_arguments():
     args = parser.parse_args()
 
     return args
+
+
+def get_image(gen, point):
+    images = list(map(lambda x: x.detach(), gen(point)))
+    images = progressive_upscaling(images)
+    images = list(map(lambda x: x.squeeze(dim=0), images))
+    image = make_grid(
+        images,
+        nrow=int(ceil(sqrt(len(images)))),
+        normalize=True,
+        scale_each=True
+    )
+    return image.cpu().numpy().transpose(1, 2, 0)
 
 
 def main(args):
@@ -75,52 +87,33 @@ def main(args):
     generator.load_state_dict(th.load(args.generator_file))
 
     # total_frames in the video:
-    total_time_for_one_transition = args.traversal_time + args.static_time
-    total_frames_for_one_transition = (total_time_for_one_transition * args.fps)
-    number_of_transitions = int((args.time * 60) / total_time_for_one_transition)
-    total_frames = int(number_of_transitions * total_frames_for_one_transition)
+    total_frames = int(args.time * args.fps)
 
     # Let's create the animation video from the latent space interpolation
-    # I save the frames required for making the video here
-    point_1 = th.randn(1, args.latent_size).to(device) * args.std
+    # all latent vectors:
+    all_latents = th.randn(total_frames, args.latent_size).to(device) * args.std
+    all_latents = gaussian_filter(all_latents.cpu(), [args.fps, 0])
+    all_latents = th.from_numpy(all_latents)
+    all_latents = all_latents / all_latents.norm(dim=-1, keepdim=True) \
+                  * (sqrt(args.latent_size))
 
     # create output directory
     os.makedirs(args.out_dir, exist_ok=True)
 
+    global_frame_counter = 1
     # Run the main loop for the interpolation:
-    global_frame_counter = 1  # counts number of frames
-    while global_frame_counter <= total_frames:
-        point_2 = th.randn(1, args.latent_size).to(device) * args.std
-        direction = point_2 - point_1
+    print("Generating the video frames ...")
+    for latent in tqdm(all_latents):
+        latent = th.unsqueeze(latent, dim=0)
 
-        # create the points for images in this space:
-        number_of_points = int(args.traversal_time * args.fps)
-        for i in range(number_of_points):
-            point = point_1 + ((direction / number_of_points) * i)
+        # generate the image for this point:
+        img = get_image(generator, latent)
 
-            # generate the image for this point:
-            generator.load_state_dict(th.load(args.generator_file))
-            img = th.squeeze(generator(point)[-1].detach(), dim=0).permute(1, 2, 0) / 2 + 0.5
+        # save the image:
+        plt.imsave(os.path.join(args.out_dir, str(global_frame_counter) + ".png"), img)
 
-            # save the image:
-            plt.imsave(os.path.join(args.out_dir, str(global_frame_counter) + ".png"), img)
-
-            # increment the counter:
-            global_frame_counter += 1
-
-        # at point_2, now add static frames:
-        generator.load_state_dict(th.load(args.generator_file))
-        img = th.squeeze(generator(point_2)[-1].detach(), dim=0).permute(1, 2, 0) / 2 + 0.5
-
-        # now save the same image a number of times:
-        for _ in range(args.static_time * args.fps):
-            plt.imsave(os.path.join(args.out_dir, str(global_frame_counter) + ".png"), img)
-            global_frame_counter += 1
-
-        # set the point_1 := point_2
-        point_1 = point_2
-
-        print("Generated %d frames ..." % global_frame_counter)
+        # increment the counter:
+        global_frame_counter += 1
 
     # video frames have been generated
     print("Video frames have been generated at:", args.out_dir)

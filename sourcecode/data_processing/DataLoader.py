@@ -140,26 +140,45 @@ class FoldersDistributedDataset(Dataset):
         return img
 
 
-def get_transform(new_size=None):
+def get_transform(new_size=None, flip_horizontal=False):
     """
     obtain the image transforms required for the input data
     :param new_size: size of the resized images
+    :param flip_horizontal: Whether to randomly mirror input images during training
     :return: image_transform => transform object from TorchVision
     """
-    from torchvision.transforms import ToTensor, Normalize, Compose, Resize
+    from torchvision.transforms import ToTensor, Normalize, Compose, Resize, \
+        RandomHorizontalFlip
 
-    if new_size is not None:
-        image_transform = Compose([
-            Resize(new_size),
-            ToTensor(),
-            Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
-        ])
+    if not flip_horizontal:
+        if new_size is not None:
+            image_transform = Compose([
+                Resize(new_size),
+                ToTensor(),
+                Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
+            ])
 
+        else:
+            image_transform = Compose([
+                ToTensor(),
+                Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
+            ])
     else:
-        image_transform = Compose([
-            ToTensor(),
-            Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
-        ])
+        if new_size is not None:
+            image_transform = Compose([
+                RandomHorizontalFlip(p=0.5),
+                Resize(new_size),
+                ToTensor(),
+                Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
+            ])
+
+        else:
+            image_transform = Compose([
+                RandomHorizontalFlip(p=0.5),
+                ToTensor(),
+                Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
+            ])
+
     return image_transform
 
 

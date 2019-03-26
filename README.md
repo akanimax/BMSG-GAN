@@ -150,21 +150,21 @@ DGX-1 machine for our experimentation.
 ### Generated samples on different datasets
  
 <p align="center">
-     <b> CelebA HQ (30K dataset)</b>
+     <b> CelebA HQ (30K dataset)</b> <br>
      <img alt="CelebA-HQ" src="https://github.com/akanimax/BMSG-GAN/blob/master/diagrams/CelebA-HQ_sheet.png"
           width=80% />
 </p>
 <br>
 
 <p align="center">
-     <b> LSUN Bedrooms (3M dataset) </b>
+     <b> LSUN Bedrooms (3M dataset) </b> <br>
      <img alt="lsun_bedrooms" src="https://github.com/akanimax/BMSG-GAN/blob/master/diagrams/Bedrooms_sheet.png"
           width=80% />
 </p>
 <br>
 
 <p align="center">
-     <b> CelebA (200K dataset) </b>
+     <b> CelebA (200K dataset) </b> <br>
      <img alt="CelebA" src="https://github.com/akanimax/BMSG-GAN/blob/master/diagrams/faces_sheet.png"
           width=80% />
 </p>
@@ -172,14 +172,14 @@ DGX-1 machine for our experimentation.
 
 ### Synchronized all-res generated samples
 <p align="center">
-     <b> Cifar-10 (50K dataset)</b>
+     <b> Cifar-10 (50K dataset)</b> <br>
      <img alt="cifar_allres" src="https://github.com/akanimax/BMSG-GAN/blob/master/diagrams/CIFAR10_allres_sheet.png"
           width=80% />
 </p>
 <br>
 
 <p align="center">
-     <b> Oxford-102 Flowers (8K dataset)</b>
+     <b> Oxford-102 Flowers (8K dataset)</b> <br>
      <img alt="flowers_allres" src="https://github.com/akanimax/BMSG-GAN/blob/master/diagrams/FLowers_allres_sheet.png"
           width=80% />
 </p>

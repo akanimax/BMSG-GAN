@@ -79,7 +79,7 @@ def parse_arguments():
                         help="latent size for the generator")
 
     parser.add_argument("--batch_size", action="store", type=int,
-                        default=16,
+                        default=20,
                         help="batch_size for training")
 
     parser.add_argument("--start", action="store", type=int,
@@ -137,7 +137,6 @@ def parse_arguments():
 
     parser.add_argument("--num_workers", action="store", type=int,
                         default=3,
-
                         help="number of parallel workers for reading files")
 
     args = parser.parse_args()

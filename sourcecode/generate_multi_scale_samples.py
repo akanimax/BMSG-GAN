@@ -107,7 +107,7 @@ def main(args):
         ss_images = progressive_upscaling(ss_images)
 
         # reverse the ss_images
-        ss_images = list(reversed(ss_images))
+        # ss_images = list(reversed(ss_images))
 
         # squeeze the batch dimension from each image
         ss_images = list(map(lambda x: th.squeeze(x, dim=0), ss_images))

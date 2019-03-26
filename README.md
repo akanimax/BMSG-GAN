@@ -2,7 +2,7 @@
 ## Official code repository for the paper "MSG-GAN: Multi-Scale Gradient GAN for Stable Image Synthesis" [[arXiv]](https://arxiv.org/abs/1903.06048)
 
 <p align="center">
-<img alt="Flagship Diagram" src="https://github.com/akanimax/BMSG-GAN/blob/master/diagrams/flagship.png" height=70%/>
+<img alt="Flagship Diagram" src="https://github.com/akanimax/BMSG-GAN/blob/master/diagrams/flagship.png" width=50% height=50%/>
 <br>
 </p>
 
@@ -148,40 +148,40 @@ We used 2 Tesla V100 GPUs of the
 DGX-1 machine for our experimentation.
 
 ### Generated samples on different datasets
-
+ 
 <p align="center">
-<h5> CelebA HQ (30K dataset)</h5>
-<img alt="CelebA-HQ" src="https://github.com/akanimax/BMSG-GAN/blob/master/diagrams/CelebA-HQ_sheet.png"
-     width=80% />
+     <b> CelebA HQ (30K dataset)</b>
+     <img alt="CelebA-HQ" src="https://github.com/akanimax/BMSG-GAN/blob/master/diagrams/CelebA-HQ_sheet.png"
+          width=80% />
 </p>
 <br>
 
 <p align="center">
-<h5> LSUN Bedrooms (3M dataset)</h5>
-<img alt="lsun_bedrooms" src="https://github.com/akanimax/BMSG-GAN/blob/master/diagrams/Bedrooms_sheet.png"
-     width=80% />
+     <b> LSUN Bedrooms (3M dataset) </b>
+     <img alt="lsun_bedrooms" src="https://github.com/akanimax/BMSG-GAN/blob/master/diagrams/Bedrooms_sheet.png"
+          width=80% />
 </p>
 <br>
 
 <p align="center">
-<h5> CelebA (200K dataset)</h5>
-<img alt="CelebA" src="https://github.com/akanimax/BMSG-GAN/blob/master/diagrams/faces_sheet.png"
-     width=80% />
+     <b> CelebA (200K dataset) </b>
+     <img alt="CelebA" src="https://github.com/akanimax/BMSG-GAN/blob/master/diagrams/faces_sheet.png"
+          width=80% />
 </p>
 <br>
 
 ### Synchronized all-res generated samples
 <p align="center">
-<h5> Cifar-10 (50K dataset)</h5>
-<img alt="cifar_allres" src="https://github.com/akanimax/BMSG-GAN/blob/master/diagrams/CIFAR10_allres_sheet.png"
-     width=80% />
+     <b> Cifar-10 (50K dataset)</b>
+     <img alt="cifar_allres" src="https://github.com/akanimax/BMSG-GAN/blob/master/diagrams/CIFAR10_allres_sheet.png"
+          width=80% />
 </p>
 <br>
 
 <p align="center">
-<h5> Oxford-102 Flowers (8K dataset)</h5>
-<img alt="flowers_allres" src="https://github.com/akanimax/BMSG-GAN/blob/master/diagrams/FLowers_allres_sheet.png"
-     width=80% />
+     <b> Oxford-102 Flowers (8K dataset)</b>
+     <img alt="flowers_allres" src="https://github.com/akanimax/BMSG-GAN/blob/master/diagrams/FLowers_allres_sheet.png"
+          width=80% />
 </p>
 <br>
 

@@ -158,7 +158,7 @@ DGX-1 machine for our experimentation.
 
 <p align="center">
      <b> LSUN Bedrooms (3M dataset) </b> <br>
-     <img alt="lsun_bedrooms" src="https://github.com/akanimax/BMSG-GAN/blob/master/diagrams/Bedrooms_sheet.png"
+     <img alt="lsun_bedrooms" src="https://github.com/akanimax/BMSG-GAN/blob/master/diagrams/Bedrooms_sheet_new.png"
           width=80% />
 </p>
 <br>

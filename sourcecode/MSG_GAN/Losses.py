@@ -110,8 +110,9 @@ class WGAN_GP(GANLoss):
         op = self.dis(merged)
 
         # perform backward pass from op to merged for obtaining the gradients
-        op.backward(gradient=th.ones_like(op), create_graph=True)
-        gradient = merged.grad  # this is the gradient of the op wrt. merged
+        gradient = th.autograd.grad(outputs=op, inputs=merged,
+                                    grad_outputs=th.ones_like(op), create_graph=True,
+                                    retain_graph=True, only_inputs=True)[0]
 
         # calculate the penalty using these gradients
         gradient = gradient.view(gradient.shape[0], -1)

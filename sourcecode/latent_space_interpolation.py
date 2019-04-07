@@ -1,6 +1,7 @@
 """ script for generating samples from a trained model """
 
 import torch as th
+import numpy as np
 import argparse
 import matplotlib.pyplot as plt
 import os
@@ -46,6 +47,9 @@ def parse_arguments():
     parser.add_argument("--fps", action="store", type=int,
                         default=30, help="Frames per second in the video")
 
+    parser.add_argument("--smoothing", action="store", type=float,
+                        default=2.0, help="Amount of smoothing applied in transitional points")
+
     parser.add_argument("--out_dir", action="store", type=str,
                         default="interp_animation_frames/",
                         help="path to the output directory for the frames")
@@ -54,16 +58,23 @@ def parse_arguments():
 
     return args
 
+def adjust_dynamic_range(data, drange_in, drange_out):
+    if drange_in != drange_out:
+        scale = (np.float32(drange_out[1]) - np.float32(drange_out[0])) / (np.float32(drange_in[1]) - np.float32(drange_in[0]))
+        bias = (np.float32(drange_out[0]) - np.float32(drange_in[0]) * scale)
+        data = data * scale + bias
+    return th.clamp(data, min=0, max=1)
+
 
 def get_image(gen, point):
-    images = list(map(lambda x: x.detach(), gen(point)))
+    images = list(map(lambda x: x.detach(), gen(point)))[1:]
+    images = [adjust_dynamic_range(image, (-1, 1), (0, 1)) for image in images]
     images = progressive_upscaling(images)
     images = list(map(lambda x: x.squeeze(dim=0), images))
     image = make_grid(
         images,
         nrow=int(ceil(sqrt(len(images)))),
-        normalize=True,
-        scale_each=True
+        padding=0
     )
     return image.cpu().numpy().transpose(1, 2, 0)
 

@@ -80,6 +80,22 @@ class Generator(th.nn.Module):
 
         return outputs
 
+    @staticmethod
+    def adjust_dynamic_range(data, drange_in=(-1, 1), drange_out=(0, 1)):
+        """
+        adjust the dynamic colour range of the given input data
+        :param data: input image data
+        :param drange_in: original range of input
+        :param drange_out: required range of output
+        :return: img => colour range adjusted images
+        """
+        if drange_in != drange_out:
+            scale = (np.float32(drange_out[1]) - np.float32(drange_out[0])) / (
+                    np.float32(drange_in[1]) - np.float32(drange_in[0]))
+            bias = (np.float32(drange_out[0]) - np.float32(drange_in[0]) * scale)
+            data = data * scale + bias
+        return th.clamp(data, min=0, max=1)
+
 
 class Discriminator(th.nn.Module):
     """ Discriminator of the GAN """
@@ -325,25 +341,24 @@ class MSG_GAN:
         from torch.nn.functional import interpolate
         from numpy import sqrt, power
 
+        # dynamically adjust the colour of the images
+        samples = [Generator.adjust_dynamic_range(sample) for sample in samples]
+
         # resize the samples to have same resolution:
         for i in range(len(samples)):
             samples[i] = interpolate(samples[i],
                                      scale_factor=power(2,
                                                         self.depth - 1 - i))
-
         # save the images:
         for sample, img_file in zip(samples, img_files):
             save_image(sample, img_file, nrow=int(sqrt(sample.shape[0])),
-                       normalize=True, scale_each=True)
+                       normalize=True, scale_each=True, padding=0)
 
     def train(self, data, gen_optim, dis_optim, loss_fn, normalize_latents=True,
               start=1, num_epochs=12, feedback_factor=10, checkpoint_factor=1,
               data_percentage=100, num_samples=36,
               log_dir=None, sample_dir="./samples",
               save_dir="./models"):
-
-        # TODO_complete write the documentation for this method
-        # no more procrastination ... HeHe
         """
         Method for training the network
         :param data: pytorch dataloader which iterates over images

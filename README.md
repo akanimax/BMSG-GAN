@@ -170,6 +170,13 @@ DGX-1 machine for our experimentation.
 </p>
 <br>
 
+<p align="center">
+     <b> Cartoon Set (10K dataset) </b> <br>
+     <img alt="Cartoon_Set" src="https://github.com/huangzh13/BMSG-GAN/blob/dev/diagrams/cartoonset_sheet.png"
+          width=80% />
+</p>
+<br>
+
 ### Synchronized all-res generated samples
 <p align="center">
      <b> Cifar-10 (50K dataset)</b> <br>

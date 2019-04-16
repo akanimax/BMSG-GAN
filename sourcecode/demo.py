@@ -101,7 +101,7 @@ def main(args):
     all_latents = th.from_numpy(
         gaussian_filter(
             all_latents.cpu(),
-            [args.transition_points, 0], mode="wrap"))
+            [args.smoothing * args.transition_points, 0], mode="wrap"))
     all_latents = (all_latents /
                    all_latents.norm(dim=-1, keepdim=True)) * sqrt(args.latent_size)
 

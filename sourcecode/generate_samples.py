@@ -2,6 +2,7 @@
 
 import argparse
 import torch as th
+import numpy as np
 import os
 from torch.backends import cudnn
 from MSG_GAN.GAN import Generator
@@ -52,6 +53,21 @@ def parse_arguments():
 
     return args
 
+def adjust_dynamic_range(data, drange_in=(-1, 1), drange_out=(0, 1)):
+    """
+    adjust the dynamic colour range of the given input data
+    :param data: input image data
+    :param drange_in: original range of input
+    :param drange_out: required range of output
+    :return: img => colour range adjusted images
+    """
+    if drange_in != drange_out:
+        scale = (np.float32(drange_out[1]) - np.float32(drange_out[0])) / (
+                np.float32(drange_in[1]) - np.float32(drange_in[0]))
+        bias = (np.float32(drange_out[0]) - np.float32(drange_in[0]) * scale)
+        data = data * scale + bias
+    return th.clamp(data, min=0, max=1)
+
 
 def progressive_upscaling(images):
     """
@@ -101,6 +117,7 @@ def main(args):
             ss_images = gen(point)
 
         # resize the images:
+        ss_images = [adjust_dynamic_range(ss_image) for ss_image in ss_images]
         ss_images = progressive_upscaling(ss_images)
         ss_image = ss_images[args.out_depth]
 

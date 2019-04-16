@@ -41,9 +41,6 @@ def parse_arguments():
                         default=30,
                         help="Number of seconds for the video to make")
 
-    parser.add_argument("--std", action="store", type=float, default=1,
-                        help="Truncated standard deviation fo the drawn samples")
-
     parser.add_argument("--fps", action="store", type=int,
                         default=30, help="Frames per second in the video")
 
@@ -58,7 +55,7 @@ def parse_arguments():
 
     return args
 
-def adjust_dynamic_range(data, drange_in, drange_out):
+def adjust_dynamic_range(data, drange_in=(-1, 1), drange_out=(0, 1)):
     if drange_in != drange_out:
         scale = (np.float32(drange_out[1]) - np.float32(drange_out[0])) / (np.float32(drange_in[1]) - np.float32(drange_in[0]))
         bias = (np.float32(drange_out[0]) - np.float32(drange_in[0]) * scale)
@@ -67,9 +64,11 @@ def adjust_dynamic_range(data, drange_in, drange_out):
 
 
 def get_image(gen, point):
-    images = list(map(lambda x: x.detach(), gen(point)))[1:]
-    images = [adjust_dynamic_range(image, (-1, 1), (0, 1)) for image in images]
+    images = list(map(lambda x: x.detach(), gen(point)))
+    images = [adjust_dynamic_range(image) for image in images]
     images = progressive_upscaling(images)
+    # discard 128_x_128 resolution (temporarily)
+    images = images[:-2] + images[-1:]
     images = list(map(lambda x: x.squeeze(dim=0), images))
     image = make_grid(
         images,
@@ -102,10 +101,10 @@ def main(args):
 
     # Let's create the animation video from the latent space interpolation
     # all latent vectors:
-    all_latents = th.randn(total_frames, args.latent_size).to(device) * args.std
-    all_latents = gaussian_filter(all_latents.cpu(), [args.fps, 0])
+    all_latents = th.randn(total_frames, args.latent_size).to(device)
+    all_latents = gaussian_filter(all_latents.cpu(), [args.smoothing * args.fps, 0])
     all_latents = th.from_numpy(all_latents)
-    all_latents = all_latents / all_latents.norm(dim=-1, keepdim=True) \
+    all_latents = (all_latents / all_latents.norm(dim=-1, keepdim=True)) \
                   * (sqrt(args.latent_size))
 
     # create output directory

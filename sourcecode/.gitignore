@@ -1,3 +1,4 @@
 # ignore models and samples directory
 models/
 samples/
+new_interps_for_promotion/

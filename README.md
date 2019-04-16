@@ -2,7 +2,7 @@
 ## Official code repository for the paper "MSG-GAN: Multi-Scale Gradient GAN for Stable Image Synthesis" [[arXiv]](https://arxiv.org/abs/1903.06048)
 
 <p align="center">
-<img alt="Flagship Diagram" src="https://github.com/akanimax/BMSG-GAN/blob/master/diagrams/flagship.png" width=50% height=50%/>
+<img alt="Flagship Diagram" src="https://github.com/akanimax/BMSG-GAN/blob/master/diagrams/flagship.png" />
 <br>
 </p>
 

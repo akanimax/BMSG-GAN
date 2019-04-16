@@ -29,6 +29,14 @@ techniques which perform multi-scale image synthesis. In addition,
 we also provide details of our experiment on CelebA-HQ dataset 
 for synthesizing 1024 x 1024 high resolution images.
 
+
+<p align="center">
+<img alt="Training time-lapse gif" src="https://github.com/akanimax/BMSG-GAN/blob/master/diagrams/explanatory_video_2.gif" />
+<br>
+</p>
+
+An explanatory training time-lapse video/gif for the MSG-GAN. The higher resolution layers initially display plain colour blocks but eventually (very soon) the training penetrates all layers and then they all work in unison to produce better samples. Please observe the first few secs of the training, where the face like blobs appear in a sequential order from the lowest resolution to the highest resolution. 
+
 ### Multi-Scale Gradients architecture
 <p align="center">
 <img alt="proposed MSG-GAN architecture" src="https://github.com/akanimax/BMSG-GAN/blob/master/diagrams/architecture.png"

@@ -193,6 +193,15 @@ DGX-1 machine for our experimentation.
       year={2019}
     }
 
+### Other Contributors :smile:
+
+<p align="center">
+     <b> Cartoon Set (10K dataset) by <a href="https://github.com/huangzh13">@huangzh13</a> </b> <br>
+     <img alt="Cartoon_Set" src="https://github.com/huangzh13/BMSG-GAN/blob/dev/diagrams/cartoonset_sheet.png"
+          width=80% />
+</p>
+<br>
+
 ### Thanks
 Please feel free to open PRs here if 
 you train on other datasets using this architecture. 

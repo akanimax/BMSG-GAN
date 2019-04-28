@@ -444,7 +444,7 @@ class MSG_GAN:
                                                    images, loss_fn)
 
                 # provide a loss feedback
-                if i % int(limit / feedback_factor) == 0 or i == 1:
+                if i % (int(limit / feedback_factor) + 1) == 0 or i == 1:     # Avoid div by 0 error on small training sets
                     elapsed = time.time() - global_time
                     elapsed = str(datetime.timedelta(seconds=elapsed))
                     print("Elapsed [%s] batch: %d  d_loss: %f  g_loss: %f"

@@ -1,7 +1,7 @@
 # Sagemaker-BMSG-GAN 
 ## Official code repository for the paper "MSG-GAN: Multi-Scale Gradient GAN for Stable Image Synthesis" [[arXiv]](https://arxiv.org/abs/1903.06048)
 
-SageMaker Configuration Added
+## SageMaker Configuration Added
 
 <p align="center">
 <img alt="Flagship Diagram" src="https://github.com/akanimax/BMSG-GAN/blob/master/diagrams/flagship.png" />

@@ -1,4 +1,4 @@
-# Sagemaker-BMSG-GAN 
+# BMSG-GAN 
 ## Official code repository for the paper "MSG-GAN: Multi-Scale Gradient GAN for Stable Image Synthesis" [[arXiv]](https://arxiv.org/abs/1903.06048)
 
 ## SageMaker Configuration Added

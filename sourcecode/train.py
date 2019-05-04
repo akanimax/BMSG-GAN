@@ -1,12 +1,19 @@
 """ script for training the MSG-GAN on given dataset """
 
+# Set to True if using in SageMaker
+USE_SAGEMAKER = False
+
 import argparse
 
 import os
-import sagemaker_containers
 import numpy as np
 import torch as th
 from torch.backends import cudnn
+
+# sagemaker_containers required to access SageMaker environment (SM_CHANNEL_TRAINING, etc.)
+# See https://github.com/aws/sagemaker-containers
+if USE_SAGEMAKER:
+    import sagemaker_containers
 
 # define the device for the training script
 device = th.device("cuda" if th.cuda.is_available() else "cpu")

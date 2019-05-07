@@ -161,12 +161,21 @@ DGX-1 machine for our experimentation.
 ### Generated samples on different datasets
 
 <p align="center">
-     <b> CelebA HQ [1024 x 1024] (30K dataset)</b> <br>
+     <b> <b> :star: [NEW] :star: </b> CelebA HQ [1024 x 1024] (30K dataset)</b> <br>
      <img alt="CelebA-HQ" src="https://github.com/akanimax/BMSG-GAN/blob/master/diagrams/HQ_faces_sheet.png"
           width=80% />
 </p>
 <br>
- 
+
+<p align="center">
+     <b> <b> :star: [NEW] :star: </b> Oxford Flowers (improved samples) [256 x 256] (8K dataset)</b> <br>
+     <img alt="oxford_big" src="https://github.com/akanimax/BMSG-GAN/blob/master/diagrams/flowers_sheet.png"
+          width=80% />
+     <img alt="oxford_variety" src="https://github.com/akanimax/BMSG-GAN/blob/master/diagrams/variety_flowers_sheet.png"
+          width=80% />
+</p>
+<br>
+
 <p align="center">
      <b> CelebA HQ [256 x 256] (30K dataset)</b> <br>
      <img alt="CelebA-HQ" src="https://github.com/akanimax/BMSG-GAN/blob/master/diagrams/CelebA-HQ_sheet.png"

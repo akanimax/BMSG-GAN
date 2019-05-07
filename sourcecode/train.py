@@ -1,10 +1,19 @@
 """ script for training the MSG-GAN on given dataset """
 
+# Set to True if using in SageMaker
+USE_SAGEMAKER = False
+
 import argparse
 
+import os
 import numpy as np
 import torch as th
 from torch.backends import cudnn
+
+# sagemaker_containers required to access SageMaker environment (SM_CHANNEL_TRAINING, etc.)
+# See https://github.com/aws/sagemaker-containers
+if USE_SAGEMAKER:
+    import sagemaker_containers
 
 # define the device for the training script
 device = th.device("cuda" if th.cuda.is_available() else "cpu")
@@ -44,7 +53,8 @@ def parse_arguments():
                         help="saved state for discriminator optimizer")
 
     parser.add_argument("--images_dir", action="store", type=str,
-                        default="../data/celeba",
+                        # default="../data/celeba",
+                        default=os.environ['SM_CHANNEL_TRAINING'],
                         help="path for the images directory")
 
     parser.add_argument("--folder_distributed", action="store", type=bool,
@@ -56,11 +66,13 @@ def parse_arguments():
                         help="whether to randomly mirror the images during training")
 
     parser.add_argument("--sample_dir", action="store", type=str,
-                        default="samples/1/",
+                        # default="samples/1/",
+                        default=os.environ['SM_MODEL_DIR'],
                         help="path for the generated samples directory")
 
     parser.add_argument("--model_dir", action="store", type=str,
-                        default="models/1/",
+                        # default="models/1/",
+                        default=os.environ['SM_MODEL_DIR'],
                         help="path for saved models directory")
 
     parser.add_argument("--loss_function", action="store", type=str,
@@ -140,6 +152,7 @@ def parse_arguments():
                         help="number of parallel workers for reading files")
 
     args = parser.parse_args()
+    print('args={}'.format(args))
 
     return args
 

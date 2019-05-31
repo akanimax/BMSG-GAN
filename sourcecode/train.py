@@ -151,6 +151,11 @@ def parse_arguments():
                         default=3,
                         help="number of parallel workers for reading files")
 
+    parser.add_argument("--img_channels", type=int,
+                        default=3,
+                        help="Channels in input images. E.g. this should be 3 "
+                             "for RGB images or 1 for grayscale images.")
+
     args = parser.parse_args()
     print('args={}'.format(args))
 
@@ -176,7 +181,8 @@ def main(args):
         args.images_dir,
         transform=get_transform((int(np.power(2, args.depth + 1)),
                                  int(np.power(2, args.depth + 1))),
-                                flip_horizontal=args.flip_augment))
+                                flip_horizontal=args.flip_augment,
+                                img_channels=args.img_channels))
 
     data = get_data_loader(dataset, args.batch_size, args.num_workers)
     print("Total number of images in the dataset:", len(dataset))
@@ -187,7 +193,8 @@ def main(args):
                       use_eql=args.use_eql,
                       use_ema=args.use_ema,
                       ema_decay=args.ema_decay,
-                      device=device)
+                      device=device,
+                      img_channels=args.img_channels)
 
     if args.generator_file is not None:
         # load the weights into generator

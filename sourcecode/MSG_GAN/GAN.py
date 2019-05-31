@@ -9,16 +9,19 @@ import copy
 import numpy as np
 import torch as th
 
+# TODO: The to_rgb() functions in this file should be renamed now that non-rgb images are supported
+
 
 class Generator(th.nn.Module):
     """ Generator of the GAN network """
 
-    def __init__(self, depth=7, latent_size=512, use_eql=True):
+    def __init__(self, depth=7, latent_size=512, use_eql=True, img_channels=3):
         """
         constructor for the Generator class
         :param depth: required depth of the Network
         :param latent_size: size of the latent manifold
         :param use_eql: whether to use equalized learning rate
+        :param img_channels: Number of channels of the input/generated images
         """
         from torch.nn import ModuleList, Conv2d
         from MSG_GAN.CustomLayers import GenGeneralConvBlock, \
@@ -40,10 +43,10 @@ class Generator(th.nn.Module):
         # create the ToRGB layers for various outputs:
         if self.use_eql:
             def to_rgb(in_channels):
-                return _equalized_conv2d(in_channels, 3, (1, 1), bias=True)
+                return _equalized_conv2d(in_channels, img_channels, (1, 1), bias=True)
         else:
             def to_rgb(in_channels):
-                return Conv2d(in_channels, 3, (1, 1), bias=True)
+                return Conv2d(in_channels, img_channels, (1, 1), bias=True)
 
         # create a module list of the other required general convolution blocks
         self.layers = ModuleList([GenInitialBlock(self.latent_size, use_eql=self.use_eql)])
@@ -101,7 +104,7 @@ class Discriminator(th.nn.Module):
     """ Discriminator of the GAN """
 
     def __init__(self, depth=7, feature_size=512,
-                 use_eql=True, gpu_parallelize=False):
+                 use_eql=True, gpu_parallelize=False, img_channels=3):
         """
         constructor for the class
         :param depth: total depth of the discriminator
@@ -112,6 +115,7 @@ class Discriminator(th.nn.Module):
         :param gpu_parallelize: whether to use DataParallel on the discriminator
                                 Note that the Last block contains StdDev layer
                                 So, it is not parallelized.
+        :param img_channels: Number of channels of the input/generated images
         """
         from torch.nn import ModuleList
         from MSG_GAN.CustomLayers import DisGeneralConvBlock, \
@@ -135,10 +139,10 @@ class Discriminator(th.nn.Module):
         # create the fromRGB layers for various inputs:
         if self.use_eql:
             def from_rgb(out_channels):
-                return _equalized_conv2d(3, out_channels, (1, 1), bias=True)
+                return _equalized_conv2d(img_channels, out_channels, (1, 1), bias=True)
         else:
             def from_rgb(out_channels):
-                return Conv2d(3, out_channels, (1, 1), bias=True)
+                return Conv2d(img_channels, out_channels, (1, 1), bias=True)
 
         self.rgb_to_features = ModuleList()
         self.final_converter = from_rgb(self.feature_size // 2)
@@ -219,23 +223,27 @@ class MSG_GAN:
             use_ema: whether to use exponential moving averages.
             ema_decay: value of ema decay. Used only if use_ema is True
             device: device to run the GAN on (GPU / CPU)
+            img_channels: Number of channels of the input/generated images
     """
 
     def __init__(self, depth=7, latent_size=512,
                  use_eql=True, use_ema=True, ema_decay=0.999,
-                 device=th.device("cpu")):
+                 device=th.device("cpu"), img_channels=3):
         """ constructor for the class """
         from torch.nn import DataParallel
 
-        self.gen = Generator(depth, latent_size, use_eql=use_eql).to(device)
+        self.gen = Generator(depth, latent_size, use_eql=use_eql,
+                             img_channels=img_channels).to(device)
 
         # Parallelize them if required:
         if device == th.device("cuda"):
             self.gen = DataParallel(self.gen)
             self.dis = Discriminator(depth, latent_size,
-                                     use_eql=use_eql, gpu_parallelize=True).to(device)
+                                     use_eql=use_eql, gpu_parallelize=True,
+                                     img_channels=img_channels).to(device)
         else:
-            self.dis = Discriminator(depth, latent_size, use_eql=True).to(device)
+            self.dis = Discriminator(depth, latent_size, use_eql=True,
+                                     img_channels=img_channels).to(device)
 
         # state of the object
         self.use_ema = use_ema

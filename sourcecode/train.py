@@ -52,6 +52,16 @@ def parse_arguments():
                         default=None,
                         help="saved state for discriminator optimizer")
 
+    parser.add_argument("--dataset_dir", action="store", type=str,
+                        default="../data/",
+                        help="directory to download/use a pytorch dataset")
+
+    parser.add_argument("--pytorch_dataset", action="store", type=str,
+                        default=None,
+                        help="Whether to use a default pytorch dataset" +
+                             "Currently supported:" +
+                             "1.) cifar-10")
+
     parser.add_argument("--images_dir", action="store", type=str,
                         # default="../data/celeba",
                         default=os.environ['SM_CHANNEL_TRAINING'],
@@ -165,18 +175,29 @@ def main(args):
     """
     from MSG_GAN.GAN import MSG_GAN
     from data_processing.DataLoader import FlatDirectoryImageDataset, \
-        get_transform, get_data_loader, FoldersDistributedDataset
+        get_transform, get_data_loader, FoldersDistributedDataset, IgnoreLabels
+    from torchvision.datasets import CIFAR10
     from MSG_GAN import Losses as lses
 
-    # create a data source:
-    data_source = FlatDirectoryImageDataset if not args.folder_distributed \
-        else FoldersDistributedDataset
+    # transformation routine:
+    res = int(np.power(2, args.depth + 1))
+    img_transform = get_transform((res, res), flip_horizontal=args.flip_augment)
 
-    dataset = data_source(
-        args.images_dir,
-        transform=get_transform((int(np.power(2, args.depth + 1)),
-                                 int(np.power(2, args.depth + 1))),
-                                flip_horizontal=args.flip_augment))
+    # create a data source:
+    if args.pytorch_dataset is None:
+        data_source = FlatDirectoryImageDataset if not args.folder_distributed \
+            else FoldersDistributedDataset
+
+        dataset = data_source(
+            args.images_dir,
+            transform=img_transform)
+    else:
+        dataset_name = args.pytorch_dataset.lower()
+        if dataset_name == "cifar-10":
+            dataset = IgnoreLabels(CIFAR10(
+                args.dataset_dir, transform=img_transform, download=True))
+        else:
+            raise Exception("Unknown dataset  requested")
 
     data = get_data_loader(dataset, args.batch_size, args.num_workers)
     print("Total number of images in the dataset:", len(dataset))

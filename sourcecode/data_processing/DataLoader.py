@@ -140,6 +140,31 @@ class FoldersDistributedDataset(Dataset):
         return img
 
 
+class IgnoreLabels(Dataset):
+
+    def __init__(self, dataset):
+        """
+        Dataset Decorator (traditional) for ignoring labels in a dataset
+        :param dataset: Dataset which returns (image, target) pair
+        """
+        self.dataset = dataset
+
+    def __len__(self):
+        """
+        simple delegation to the original dataset
+        :return: length of the dataset
+        """
+        return len(self.dataset)
+
+    def __getitem__(self, item):
+        """
+        overrides the __getitem__ of the original dataset to ignore the label
+        :param item: index of item (same as before)
+        :return: img => returns just the image
+        """
+        return self.dataset[item][0]  # ignores the label
+
+
 def get_transform(new_size=None, flip_horizontal=False):
     """
     obtain the image transforms required for the input data

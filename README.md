@@ -1,6 +1,6 @@
 # BMSG-GAN 
 ## PyTorch implementation of [MSG-GAN].
-## **Please note that this is not the repo for the MSG-GAN research paper. Please head over to the [msg-stylegan-tf](https://github.com/akanimax/msg-stylegan-tf) repository for the official code for the [MSG-GAN](https://arxiv.org/abs/1903.06048) paper.
+## **Please note that this is not the repo for the MSG-GAN research paper. Please head over to the [msg-stylegan-tf](https://github.com/akanimax/msg-stylegan-tf) repository for the official code and trained models for the [MSG-GAN](https://arxiv.org/abs/1903.06048) paper.
 
 ## SageMaker
 Training is now supported on AWS SageMaker. Please read https://docs.aws.amazon.com/sagemaker/latest/dg/pytorch.html 

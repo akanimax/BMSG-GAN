@@ -1,8 +1,6 @@
 # BMSG-GAN 
-
-## \[:star: New :star:\] Please head over to [BBMSG-GAN](https://github.com/akanimax/BBMSG-GAN) to stay in sync with our current research. In order to match the performance of ProGANs, we increased the size of the Discriminator (the one here in BMSG-GAN is technically half that of ProGAN) and use tricks like Batch Spoofing. The BBMSG-GAN also has tensorboard support and FID logging feature during training. The results obtained using BBMSG-GAN are the best (better than the ones here) till now, especially on higher resolutions. We would recommend using BBMSG-GAN (Big Discriminator) for higher resolution Image Synthesis. Further experiments (along with research developments) are still in progress, hence it is kept as a separate repository.
-
-## Official code repository for the paper "MSG-GAN: Multi-Scale Gradient GAN for Stable Image Synthesis" [[arXiv]](https://arxiv.org/abs/1903.06048)
+## PyTorch implementation of [MSG-GAN].
+## **Please note that this is not the repo for the MSG-GAN research paper. Please head over to the [msg-stylegan-tf](https://github.com/akanimax/msg-stylegan-tf) repository for the official code for the [MSG-GAN](https://arxiv.org/abs/1903.06048) paper.
 
 ## SageMaker
 Training is now supported on AWS SageMaker. Please read https://docs.aws.amazon.com/sagemaker/latest/dg/pytorch.html 

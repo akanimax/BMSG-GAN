@@ -97,15 +97,22 @@ class WGAN_GP(GANLoss):
         :return: tensor (gradient penalty)
         """
 
-        batch_size = real_samps.shape[0]
+        def _interp(real_samp, fake_samp):
+            batch_size = real_samp.shape[0]
 
-        # generate random epsilon
-        epsilon = th.rand((batch_size, 1, 1, 1)).to(fake_samps.device)
+            # generate random epsilon
+            epsilon = th.rand((batch_size, 1, 1, 1)).to(fake_samp.device)
 
-        # create the merge of both real and fake samples
-        merged = (epsilon * real_samps) + ((1 - epsilon) * fake_samps)
-        merged.requires_grad = True
+            # create the merge of both real and fake samples
+            merged = (epsilon * real_samp) + ((1 - epsilon) * fake_samp)
+            merged.requires_grad = True
+            return merged
 
+        if isinstance(real_samps, list):
+            merged = [_interp(real_samps[i], fake_samps[i]) for i in range(len(real_samps))]
+
+        else:
+            merged = _interp(real_samps, fake_samps)
         # forward pass
         op = self.dis(merged)
 

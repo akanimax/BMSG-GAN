@@ -1,0 +1,7 @@
+$schema: https://azuremlschemas.azureedge.net/latest/amlCompute.schema.json 
+name: gpu-cluster2
+type: amlcompute
+size: STANDARD_NC6
+min_instances: 0
+max_instances: 10
+idle_time_before_scale_down: 300 #seconds

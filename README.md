@@ -5,6 +5,9 @@
 ## SageMaker
 Training is now supported on AWS SageMaker. Please read https://docs.aws.amazon.com/sagemaker/latest/dg/pytorch.html 
 
+## Azure Machine Learning
+To train on Azure ML with the Azure ML CLI v2 , see [azure-cli](azure-cli/readme.md).
+
 <p align="center">
 <img alt="Flagship Diagram" src="https://github.com/akanimax/BMSG-GAN/blob/master/diagrams/flagship.png" />
 <br>

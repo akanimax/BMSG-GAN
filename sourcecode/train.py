@@ -3,6 +3,10 @@
 # Set to True if using in SageMaker
 USE_SAGEMAKER = False
 
+# No code modifications required to run on Azure, but to take advantage of mlflow metric 
+# logging with the Azure ML studio, use the azureml-mlflow package to install mlflow
+USE_MLFLOW_LOGGING = True
+
 import argparse
 
 import os
@@ -14,6 +18,11 @@ from torch.backends import cudnn
 # See https://github.com/aws/sagemaker-containers
 if USE_SAGEMAKER:
     import sagemaker_containers
+
+# For mlflow to feed into the Azure ML dashboard, ensure it is installed with `pip install azureml-mlflow`
+# This is already done when using the environment spec in this implementation. 
+if USE_MLFLOW_LOGGING:
+    import mlflow
 
 # define the device for the training script
 device = th.device("cuda" if th.cuda.is_available() else "cpu")
@@ -197,6 +206,15 @@ def main(args):
     print("Generator Configuration: ")
     print(msg_gan.gen)
 
+
+    ## Optional: log to AzureML run with mlflow
+    if USE_MLFLOW_LOGGING:
+        with open('generator_config.txt', 'w+') as f:
+            f.write("Generator Configuration: ")
+            f.write(str(msg_gan.gen))
+        mlflow.log_artifact('generator_config.txt')
+    ## end optional
+
     if args.shadow_generator_file is not None:
         # load the weights into generator
         print("loading shadow_generator_weights from:",
@@ -211,6 +229,14 @@ def main(args):
 
     print("Discriminator Configuration: ")
     print(msg_gan.dis)
+
+    ## Optional: log to AzureML run with mlflow
+    if USE_MLFLOW_LOGGING:
+        with open('discriminator_config.txt', 'w+') as f:
+            f.write("Discriminator Configuration: ")
+            f.write(str(msg_gan.dis))
+        mlflow.log_artifact('discriminator_config.txt')
+    ## end optional
 
     # create optimizer for generator:
     gen_optim = th.optim.Adam(msg_gan.gen.parameters(), args.g_lr,
@@ -228,6 +254,11 @@ def main(args):
         dis_optim.load_state_dict(th.load(args.discriminator_optim_file))
 
     loss_name = args.loss_function.lower()
+
+    ## Optional: log to AzureML run with mlflow
+    if USE_MLFLOW_LOGGING:
+        mlflow.log_param('loss function', args.loss_function)
+    ## end optional
 
     if loss_name == "hinge":
         loss = lses.HingeGAN

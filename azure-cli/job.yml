@@ -1,0 +1,37 @@
+$schema: https://azuremlschemas.azureedge.net/latest/commandJob.schema.json
+experiment_name: BMSG-GAN-onAzure
+description: Run the BMSG-GAN pytorch architecture on Azure ML
+compute: azureml:gpu-cluster
+environment: azureml:AzureML-pytorch-1.10-ubuntu18.04-py38-cuda11-gpu@latest
+environment_variables:
+  SM_CHANNEL_TRAINING: "n/a but throws error in current codebase if not exists"
+  SM_MODEL_DIR: "n/a but throws error in current codebase if not exists"
+inputs:
+  depth: 4
+  latent_size: 64
+  batch_size: 20
+  data_percentage: 10
+  flowers102:
+    mode: ro_mount
+    path: azureml://datastores/<your-datastorename>/paths/<your>/<path>/<to>/<datadir>/
+    type: uri_folder
+code: ../sourcecode/
+command: |
+  echo "Checking NVIDA drivers"
+  nvidia-smi
+  echo "Logging available data to file"
+  ls ${{inputs.flowers102}} > outputs/image-list.txt
+  python train.py \
+    --images_dir ${{inputs.flowers102}} \
+    --depth ${{inputs.depth}} \
+    --latent_size ${{inputs.latent_size}} \
+    --batch_size ${{inputs.batch_size}} \
+    --data_percentage ${{inputs.data_percentage}} \
+    --sample_dir ${{outputs.testout}} \
+    --model_dir outputs/models/1/
+# optionally, configure a custom output location for the samples instead of hardcoding to `outputs/<folder>`, 
+# which would get stored with the run artifacts, as done here for the model_dir.
+outputs:
+  testout:
+    mode: rw_mount
+    path: azureml://datastores/<your-datastorename>/paths/<your>/<read-writeable directory/

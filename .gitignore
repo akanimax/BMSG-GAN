@@ -1,3 +1,8 @@
+# AzureML files added when running notebook on AzureML compute instance
+.ipynb_aml_checkpoints/
+*.amltmp
+.amlignore
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

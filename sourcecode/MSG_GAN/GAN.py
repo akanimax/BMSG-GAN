@@ -10,6 +10,11 @@ import numpy as np
 import torch as th
 
 
+USE_MLFLOW_LOGGING = True
+
+if USE_MLFLOW_LOGGING:
+    import mlflow
+
 class Generator(th.nn.Module):
     """ Generator of the GAN network """
 
@@ -164,6 +169,7 @@ class Discriminator(th.nn.Module):
             self.layers.append(layer)
             self.rgb_to_features.append(rgb)
 
+        ## fix: error local variable i referenced before assignment: indent this block?
         # just replace the last converter
         self.rgb_to_features[self.depth - 2] = \
             from_rgb(self.feature_size // np.power(2, i - 2))
@@ -449,6 +455,14 @@ class MSG_GAN:
                     elapsed = str(datetime.timedelta(seconds=elapsed))
                     print("Elapsed [%s] batch: %d  d_loss: %f  g_loss: %f"
                           % (elapsed, i, dis_loss, gen_loss))
+
+                        
+                    ## Optional: log run with mlflow (charted metrics)
+                    if USE_MLFLOW_LOGGING:
+                        mlflow.log_metric('batch',i)
+                        mlflow.log_metric('d_loss', dis_loss)
+                        mlflow.log_metric('g_loss',gen_loss)
+                    ## end optional
 
                     # also write the losses to the log file:
                     if log_dir is not None:

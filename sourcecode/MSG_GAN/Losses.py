@@ -100,26 +100,30 @@ class WGAN_GP(GANLoss):
         batch_size = real_samps.shape[0]
 
         # generate random epsilon
-        epsilon = th.rand((batch_size, 1, 1, 1)).to(fake_samps.device)
+        epsilon = th.rand((batch_size, 1, 1, 1)).to(fake_samps[0].device)
 
         # create the merge of both real and fake samples
-        merged = (epsilon * real_samps) + ((1 - epsilon) * fake_samps)
-        merged.requires_grad = True
+        merged = [None] * len(fake_samps)
+        for i in range(len(fake_samps)):
+            merged[i] = (epsilon * real_samps[i]) + ((1 - epsilon) * fake_samps[i])
+            merged[i].requires_grad = True
 
         # forward pass
         op = self.dis(merged)
 
-        # perform backward pass from op to merged for obtaining the gradients
-        gradient = th.autograd.grad(outputs=op, inputs=merged,
-                                    grad_outputs=th.ones_like(op), create_graph=True,
-                                    retain_graph=True, only_inputs=True)[0]
+        # perform backward pass from op to each scale in merged for obtaining the gradients
+        penalty = 0
+        for i in range(len(fake_samps)):
+            gradient = th.autograd.grad(outputs=op, inputs=merged[i],
+                                        grad_outputs=th.ones_like(op), create_graph=True,
+                                        retain_graph=True, only_inputs=True)[0]
 
-        # calculate the penalty using these gradients
-        gradient = gradient.view(gradient.shape[0], -1)
-        penalty = reg_lambda * ((gradient.norm(p=2, dim=1) - 1) ** 2).mean()
+            # calculate the penalty using the gradients at each scales
+            gradient = gradient.view(gradient.shape[0], -1)
+            penalty += reg_lambda * ((gradient.norm(p=2, dim=1) - 1) ** 2).mean()
 
-        # return the calculated penalty:
-        return penalty
+        # return the average penalty:
+        return penalty / len(fake_samps)
 
     def dis_loss(self, real_samps, fake_samps):
         # define the (Wasserstein) loss
